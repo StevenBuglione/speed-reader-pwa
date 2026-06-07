@@ -12,7 +12,6 @@ import {
   Play,
   RotateCcw,
   Search,
-  Sparkles,
   Trash2,
   Upload,
   X,
@@ -42,7 +41,6 @@ type BeforeInstallPromptEvent = Event & {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>
 }
 
-const wpmPresets = [250, 300, 400, 500, 600, 750, 900]
 const challengeDurationMs = 150000
 const accentPresets = ['#b7f56a', '#64d8cb', '#ffcf5a', '#ff7a90', '#a78bfa']
 
@@ -187,7 +185,6 @@ export default function App() {
           book={selectedBook}
           settings={settings}
           onSettings={updateSettings}
-          onSpeed={() => setView('speed')}
         />
 
         {view === 'library' && (
@@ -244,12 +241,10 @@ function TopBar({
   book,
   settings,
   onSettings,
-  onSpeed,
 }: {
   book: Book | null
   settings: ReadingSettings
   onSettings: (settings: ReadingSettings) => void
-  onSpeed: () => void
 }) {
   return (
     <header className="topbar">
@@ -259,9 +254,6 @@ function TopBar({
       </div>
       <div className="top-actions">
         <AccentMenu settings={settings} onSettings={onSettings} />
-        <button className="primary" disabled={!book} onClick={onSpeed} type="button">
-          <Gauge size={17} /> Practice
-        </button>
       </div>
     </header>
   )
@@ -327,65 +319,68 @@ function LibraryView({
   onPractice: (book: Book) => void
   onDelete: (book: Book) => void
 }) {
+  const selectedBook = books.find((book) => book.id === selectedId) ?? books[0]
+
   return (
-    <section className="content-stack">
-      <div className="import-band">
-        <div>
-          <p className="eyebrow">Local ebook library</p>
-          <h2>Upload EPUB, TXT, or text-based PDF files.</h2>
-          <p>Try the bundled sample, then add your own books. Nothing is uploaded to a server.</p>
-        </div>
-        <label className="upload-button">
-          <Upload size={18} />
-          {isImporting ? 'Importing...' : 'Import books'}
-          <input
-            accept=".epub,.txt,.pdf,text/plain,application/epub+zip,application/pdf"
-            disabled={isImporting}
-            multiple
-            onChange={(event) => void onImport(event.target.files)}
-            type="file"
-          />
-        </label>
-      </div>
+    <section className="library-screen">
       {importError && (
         <div className="notice error">
           <X size={18} />
           <span>{importError}</span>
         </div>
       )}
-      <div className="book-grid">
+
+      <div className="focus-stage library-stage">
+        <div className="focus-lines" aria-hidden="true">
+          <span />
+          <i />
+          <span />
+        </div>
+        <div className="focus-copy">
+          <p>{selectedBook ? formatLabel(selectedBook.format) : 'Library'}</p>
+          <h2>{selectedBook?.title ?? 'Speed Reader'}</h2>
+          <span>{selectedBook ? `${Math.round(bookProgress(selectedBook))}% complete` : 'Upload a book to begin'}</span>
+        </div>
+        <div className="stage-footer">
+          <ProgressBar value={selectedBook ? bookProgress(selectedBook) : 0} />
+          <div className="transport-bar">
+            <button className="icon-button" disabled={!selectedBook} onClick={() => selectedBook && onOpen(selectedBook)} title="Read" type="button">
+              <BookOpen size={18} />
+            </button>
+            <button className="play-button" disabled={!selectedBook} onClick={() => selectedBook && onPractice(selectedBook)} type="button">
+              <Play size={22} />
+            </button>
+            <label className="icon-button upload-icon" title="Upload book">
+              <Upload size={18} />
+              <input
+                accept=".epub,.txt,.pdf,text/plain,application/epub+zip,application/pdf"
+                disabled={isImporting}
+                multiple
+                onChange={(event) => void onImport(event.target.files)}
+                type="file"
+              />
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div className="library-strip" aria-label="Books">
         {books.map((book) => (
-          <article className={`book-card ${book.id === selectedId ? 'selected' : ''}`} key={book.id}>
-            <div className="book-cover">
-              <span>{book.title.slice(0, 1).toUpperCase()}</span>
-            </div>
-            <div className="book-card-body">
-              <div className="book-meta-row">
-                <span className="format-pill">{formatLabel(book.format)}</span>
-                <span>{Math.round(book.wordCount / 100) / 10}k words</span>
-              </div>
-              <h3>{book.title}</h3>
-              <p>{book.author || 'Unknown author'}</p>
-              <ProgressBar value={bookProgress(book)} />
-              <div className="card-actions">
-                <button className="primary" onClick={() => onOpen(book)} type="button">
-                  <BookOpen size={16} /> Read
-                </button>
-                <button className="secondary" onClick={() => onPractice(book)} type="button">
-                  <Gauge size={16} /> Practice
-                </button>
-                {book.format !== 'sample' && (
-                  <button className="icon-button" onClick={() => void onDelete(book)} title="Delete book" type="button">
-                    <Trash2 size={16} />
-                  </button>
-                )}
-              </div>
-            </div>
+          <article className={`book-row ${book.id === selectedId ? 'selected' : ''}`} key={book.id}>
+            <button onClick={() => onOpen(book)} type="button">
+              <span>{book.title}</span>
+              <small>{formatLabel(book.format)} · {Math.round(book.wordCount / 100) / 10}k words</small>
+            </button>
+            {book.format !== 'sample' && (
+              <button className="row-delete" onClick={() => void onDelete(book)} title="Delete book" type="button">
+                <Trash2 size={15} />
+              </button>
+            )}
           </article>
         ))}
-        <label className="empty-import">
+        <label className="book-row add-row">
           <FilePlus2 size={24} />
-          <span>Add another book</span>
+          <span>{isImporting ? 'Importing...' : 'Upload'}</span>
           <input
             accept=".epub,.txt,.pdf,text/plain,application/epub+zip,application/pdf"
             disabled={isImporting}
@@ -574,8 +569,13 @@ function SpeedView({
   }
 
   return (
-    <section className="speed-layout">
-      <div className="speed-stage">
+    <section className="speed-screen">
+      <div className="focus-stage speed-stage">
+        <div className="focus-lines" aria-hidden="true">
+          <span />
+          <i />
+          <span />
+        </div>
         <div className="speed-meta">
           <span>{book.title}</span>
           <span>{Math.round(effectiveWpm)} WPM</span>
@@ -585,9 +585,9 @@ function SpeedView({
           <span>{currentWord.slice(Math.max(1, Math.floor(currentWord.length * 0.35)))}</span>
         </div>
         <ProgressBar value={progress} />
-        <div className="speed-controls">
+        <div className="transport-bar speed-controls">
           <button
-            className="secondary"
+            className="icon-button"
             onClick={() => {
               setPlaying(false)
               setIndex(sessionStartIndex)
@@ -595,9 +595,18 @@ function SpeedView({
               runAnchorRef.current = null
               setStartedAt(null)
             }}
+            title="Reset"
             type="button"
           >
-            <RotateCcw size={17} /> Reset
+            <RotateCcw size={18} />
+          </button>
+          <button
+            className="icon-button"
+            onClick={() => void onSettings({ ...settings, rsvpWpm: Math.max(150, settings.rsvpWpm - 50) })}
+            title="Slower"
+            type="button"
+          >
+            -
           </button>
           <button
             className="play-button"
@@ -613,70 +622,49 @@ function SpeedView({
             type="button"
           >
             {playing ? <Pause size={24} /> : <Play size={24} />}
-            {playing ? 'Pause' : 'Start'}
           </button>
           <button
-            className="secondary"
+            className="icon-button"
+            onClick={() => void onSettings({ ...settings, rsvpWpm: Math.min(1200, settings.rsvpWpm + 50) })}
+            title="Faster"
+            type="button"
+          >
+            +
+          </button>
+          <button
+            className="icon-button"
             onClick={() => {
               persistPosition(index)
               onReader()
             }}
+            title="Reader"
             type="button"
           >
-            <BookOpen size={17} /> Reader
+            <BookOpen size={18} />
+          </button>
+        </div>
+
+        <div className="speed-options">
+          <label className="toggle-row">
+            <input checked={challenge} onChange={(event) => setChallenge(event.target.checked)} type="checkbox" />
+            <span>
+              <strong>Challenge</strong>
+              <small>300 to 900 WPM</small>
+            </span>
+          </label>
+          <button
+            className="secondary"
+            onClick={() => {
+              setPlaying(false)
+              runAnchorRef.current = null
+              setReviewOpen(true)
+            }}
+            type="button"
+          >
+            Finish
           </button>
         </div>
       </div>
-
-      <aside className="practice-panel">
-        <div>
-          <p className="eyebrow">Speed settings</p>
-          <h2>Find the fastest pace that still leaves a memory.</h2>
-        </div>
-        <div className="preset-grid">
-          {wpmPresets.map((preset) => (
-            <button
-              className={settings.rsvpWpm === preset && !challenge ? 'active' : ''}
-              key={preset}
-              onClick={() => {
-                setChallenge(false)
-                void onSettings({ ...settings, rsvpWpm: preset })
-              }}
-              type="button"
-            >
-              {preset}
-            </button>
-          ))}
-        </div>
-        <label className="range-control">
-          <span>Reader font size</span>
-          <input
-            max="32"
-            min="16"
-            onChange={(event) => void onSettings({ ...settings, fontSize: Number(event.target.value) })}
-            type="range"
-            value={settings.fontSize}
-          />
-        </label>
-        <label className="toggle-row">
-          <input checked={challenge} onChange={(event) => setChallenge(event.target.checked)} type="checkbox" />
-          <span>
-            <strong>Challenge ramp</strong>
-            <small>300 to 900 WPM over 2.5 minutes</small>
-          </span>
-        </label>
-        <button
-          className="primary full"
-          onClick={() => {
-            setPlaying(false)
-            runAnchorRef.current = null
-            setReviewOpen(true)
-          }}
-          type="button"
-        >
-          <Sparkles size={17} /> Finish session
-        </button>
-      </aside>
 
       {reviewOpen && (
         <div className="modal-backdrop">

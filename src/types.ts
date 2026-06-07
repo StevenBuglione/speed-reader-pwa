@@ -26,6 +26,7 @@ export interface Book {
 export interface ReadingSettings {
   id: 'default'
   theme: ThemeName
+  accentColor: string
   fontSize: number
   lineHeight: number
   rsvpWpm: number

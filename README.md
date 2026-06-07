@@ -6,7 +6,8 @@ A private, offline-ready ebook reader with integrated speed-practice tools. The 
 
 - EPUB, TXT, and text-based PDF import
 - Built-in sample reading so first-time users can try the app immediately
-- Full reader view with themes, chapter navigation, search, and saved position
+- Dark-mode-only minimalist interface with customizable accent color
+- Full reader view with chapter navigation, search, and saved position
 - RSVP speed-practice mode with WPM presets from 250 to 900
 - Challenge ramp inspired by the YouTube speed-reading challenge
 - Comprehension self-checks and local practice history

@@ -7,17 +7,17 @@ import {
   FilePlus2,
   Gauge,
   Library,
+  Palette,
   Pause,
   Play,
   RotateCcw,
   Search,
-  Settings2,
   Sparkles,
   Trash2,
   Upload,
   X,
 } from 'lucide-react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import {
   chapterOffset,
   formatLabel,
@@ -44,6 +44,7 @@ type BeforeInstallPromptEvent = Event & {
 
 const wpmPresets = [250, 300, 400, 500, 600, 750, 900]
 const challengeDurationMs = 150000
+const accentPresets = ['#b7f56a', '#64d8cb', '#ffcf5a', '#ff7a90', '#a78bfa']
 
 export default function App() {
   const [books, setBooks] = useState<Book[]>([])
@@ -137,7 +138,7 @@ export default function App() {
   }
 
   return (
-    <div className={`app theme-${settings.theme}`}>
+    <div className="app" style={{ '--accent': settings.accentColor } as CSSProperties}>
       <aside className="sidebar" aria-label="Primary">
         <button className="brand" onClick={() => setView('library')} type="button">
           <span className="logo-mark">SR</span>
@@ -171,16 +172,12 @@ export default function App() {
           </button>
         </nav>
         <div className="sidebar-panel">
-          <div>
-            <p className="eyebrow">Private by design</p>
-            <p>Books stay in this browser. The site works offline after the first visit.</p>
-          </div>
           {installPrompt ? (
             <button className="secondary full" onClick={promptInstall} type="button">
               <Download size={16} /> Add to home screen
             </button>
           ) : (
-            <p className="muted compact">Install appears when your browser offers it.</p>
+            <p className="muted compact">Local books. Offline shell. No account.</p>
           )}
         </div>
       </aside>
@@ -261,22 +258,53 @@ function TopBar({
         <h1>{book ? book.title : 'Build your library'}</h1>
       </div>
       <div className="top-actions">
-        <label className="select-label">
-          <Settings2 size={16} />
-          <select
-            value={settings.theme}
-            onChange={(event) => onSettings({ ...settings, theme: event.target.value as ReadingSettings['theme'] })}
-          >
-            <option value="paper">Paper</option>
-            <option value="ivory">Ivory</option>
-            <option value="night">Night</option>
-          </select>
-        </label>
+        <AccentMenu settings={settings} onSettings={onSettings} />
         <button className="primary" disabled={!book} onClick={onSpeed} type="button">
           <Gauge size={17} /> Practice
         </button>
       </div>
     </header>
+  )
+}
+
+function AccentMenu({
+  settings,
+  onSettings,
+}: {
+  settings: ReadingSettings
+  onSettings: (settings: ReadingSettings) => void
+}) {
+  return (
+    <details className="accent-menu">
+      <summary aria-label="Customize accent color">
+        <Palette size={16} />
+      </summary>
+      <div className="accent-popover">
+        <span>Accent</span>
+        <div className="accent-swatches" aria-label="Accent color presets">
+          {accentPresets.map((color) => (
+            <button
+              aria-label={`Use accent ${color}`}
+              className={settings.accentColor.toLowerCase() === color ? 'active' : ''}
+              key={color}
+              onClick={(event) => {
+                void onSettings({ ...settings, accentColor: color })
+                event.currentTarget.closest('details')?.removeAttribute('open')
+              }}
+              style={{ backgroundColor: color }}
+              type="button"
+            />
+          ))}
+          <label className="custom-color" aria-label="Custom accent color">
+            <input
+              onChange={(event) => void onSettings({ ...settings, accentColor: event.target.value })}
+              type="color"
+              value={settings.accentColor}
+            />
+          </label>
+        </div>
+      </div>
+    </details>
   )
 }
 

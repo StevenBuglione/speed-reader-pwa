@@ -25,7 +25,8 @@ interface SpeedReaderDb extends DBSchema {
 
 const defaultSettings: ReadingSettings = {
   id: 'default',
-  theme: 'paper',
+  theme: 'night',
+  accentColor: '#b7f56a',
   fontSize: 20,
   lineHeight: 1.75,
   rsvpWpm: 300,
@@ -73,7 +74,7 @@ export async function deleteBook(id: string) {
 export async function getSettings() {
   const db = await dbPromise
   const settings = await db.get('settings', 'default')
-  if (settings) return settings
+  if (settings) return { ...defaultSettings, ...settings }
   await db.put('settings', defaultSettings)
   return defaultSettings
 }
